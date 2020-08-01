@@ -98,9 +98,57 @@
   (let [matcher (re-matcher IP_PATTERN "")]
     (eduction (map #(parse-log-entry % matcher)) (log-reader file))))
 
-(defn read-logs
-  [file]
-  (try
-    (into [] (log-parser file))
-    (catch Throwable t
-      (throw (ex-info "Failed parsing logs" {:file file} t)))))
+(defn eval-logs
+  [xf reduce-fn combine-fn files]
+  (->> files
+       (pmap #(transduce
+               xf
+               (completing reduce-fn)
+               (reduce-fn)
+               (log-parser %)))
+       (reduce combine-fn (combine-fn))))
+
+(comment
+
+  ;; EXAMPLES
+
+  ;; Requests per Customer
+  (eval-logs
+   identity
+   (fn
+     ([] {})
+     ([result log]
+      (update result (:customer-id log) (fnil inc 0))))
+   (fn
+     ([] {})
+     ([result batch]
+      (merge-with + result batch)))
+   files)
+
+  ;; Processing Time per API Path
+  (eval-logs
+   identity
+   (fn
+     ([] {})
+     ([result log]
+      (update result (:path log) (fnil + 0.0) (:process-duration log))))
+   (fn
+     ([] {})
+     ([result batch]
+      (merge-with + result batch)))
+   files)
+
+  ;; Processing Time for specific Customer
+  (eval-logs
+   (filter (comp #{"20001"} :customer-id))
+   (fn
+     ([] {})
+     ([result log]
+      (update result (:path log) (fnil + 0.0) (:process-duration log))))
+   (fn
+     ([] {})
+     ([result batch]
+      (merge-with + result batch)))
+   files)
+
+  )
