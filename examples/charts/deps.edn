@@ -1,0 +1,3 @@
+{:paths ["src"]
+ :deps {com.hypirion/clj-xchart {:mvn/version "0.2.0"}
+        com.nevaris.onsite/api-log-parser {:local/root "../.."}}}
