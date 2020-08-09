@@ -44,7 +44,7 @@
   [string]
   (LocalDateTime/parse string DATETIME_PATTERN))
 
-(def IP_PATTERN #";\d+(\.\d+){3}$")
+(def IP_PATTERN #"^;\d+(\.\d+){3}$")
 
 (defn parse-log-entry
   ([entry] (parse-log-entry entry (re-matcher IP_PATTERN "")))
@@ -60,9 +60,10 @@
          y (.lastIndexOf entry "';" z)
          ^int
          x (loop [i (.lastIndexOf entry ";'" (dec y))]
-             (if (.matches (.reset matcher (subs entry (- i 15) i)))
-               i
-               (recur (.lastIndexOf entry ";'" (dec i)))))
+             (let [j (.lastIndexOf entry ";" (dec i))]
+               (if (.matches (.reset matcher (subs entry j i)))
+                 i
+                 (recur (.lastIndexOf entry ";'" (dec i))))))
          w (.lastIndexOf entry ";" (dec x))
          v (.lastIndexOf entry ";" (dec w))
          ^int
